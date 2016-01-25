@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"time"
 
-	vegeta "github.com/masahide/vegeta-mysql/lib"
+	vegeta "github.com/masahide/vegeta-memcached/lib"
 )
 
 func attackCmd() command {

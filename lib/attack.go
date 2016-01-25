@@ -2,6 +2,7 @@ package vegeta
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -166,13 +167,16 @@ func (a *Attacker) hit(tr Targeter, tm time.Time) *Result {
 	defer r.Close()
 	num := 0
 	for r.Next() {
-		var id interface{}
 		num++
-		if err := r.Scan(&id); err != nil {
-			res.Code = 500
-			res.Error = err.Error()
-			return &res
-		}
+		/*
+			var id interface{}
+				if err := r.Scan(&id); err != nil {
+					res.Code = 501
+					res.Error = err.Error()
+					res.Error = fmt.Sprintf("row scan err:%s: query:%s", err.Error(), req)
+					return &res
+				}
+		*/
 	}
 	//fmt.Fprintf(os.Stderr, "%d,", num)
 	res.BytesIn = 0
@@ -181,10 +185,14 @@ func (a *Attacker) hit(tr Targeter, tm time.Time) *Result {
 	err = r.Err()
 
 	if err == nil {
-		res.Code = 200
+		if num == 0 {
+			res.Code = 201
+		} else {
+			res.Code = 200
+		}
 	} else {
 		res.Code = 500
-		res.Error = err.Error()
+		res.Error = fmt.Sprintf("%s: query:%s", err.Error(), req)
 	}
 	return &res
 }

@@ -1,4 +1,4 @@
-# Vegeta-mysql [![Build Status](https://secure.travis-ci.org/masahide/vegeta-mysql.png)](http://travis-ci.org/masahide/vegeta-mysql)
+# Vegeta-memcached [![Build Status](https://secure.travis-ci.org/masahide/vegeta-memcached.png)](http://travis-ci.org/masahide/vegeta-memcached)
 
 Vegeta is a versatile HTTP load testing tool built out of a need to drill
 HTTP services with a constant request rate.
@@ -8,14 +8,14 @@ It can be used both as a command line utility and a library.
 
 ## Install
 ### Pre-compiled executables
-Get them [here](http://github.com/masahide/vegeta-mysql/releases).
+Get them [here](http://github.com/masahide/vegeta-memcached/releases).
 
 ### Source
 You need go installed and `GOBIN` in your `PATH`. Once that is done, run the
 command:
 ```shell
-$ go get github.com/masahide/vegeta-mysql
-$ go install github.com/masahide/vegeta-mysql
+$ go get github.com/masahide/vegeta-memcached
+$ go install github.com/masahide/vegeta-memcached
 ```
 
 ## Usage manual
@@ -67,10 +67,10 @@ dump command:
         Output file (default "stdout")
 
 examples:
-  vegeta-mysql attack -dsn "user:pass@tcp(localhost:3306)/hostname" -body sql.txt -duration=60s | tee results.bin | vegeta-mysql report
-  vegeta-mysql report -inputs=results.bin -reporter=json > metrics.json
-  cat results.bin | vegeta-mysql report -reporter=plot > plot.html
-  cat results.bin | vegeta-mysql report -reporter="hist[0,100ms,200ms,300ms]"
+  vegeta-memcached attack -dsn "user:pass@tcp(localhost:3306)/hostname" -body sql.txt -duration=60s | tee results.bin | vegeta-memcached report
+  vegeta-memcached report -inputs=results.bin -reporter=json > metrics.json
+  cat results.bin | vegeta-memcached report -reporter=plot > plot.html
+  cat results.bin | vegeta-memcached report -reporter="hist[0,100ms,200ms,300ms]"
 ```
 
 #### -cpus
@@ -79,7 +79,7 @@ It defaults to the amount of CPUs available in the system.
 
 ### attack
 ```shell
-Usage of vegeta-mysql attack:
+Usage of vegeta-memcached attack:
   -body string
         Requests body file
   -dsn string
