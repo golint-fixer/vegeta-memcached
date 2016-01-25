@@ -1,27 +1,25 @@
 package vegeta
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"strings"
 	"sync"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/kklis/gomemcache"
 )
 
 // Attacker is an attack executor which wraps an http.Client
 type Attacker struct {
 	//client       http.Client
-	cnn          *sql.DB
+	cnn          *memcached
 	stopch       chan struct{}
 	workers      uint64
 	redirects    int
-	maxIdleConns int
 	maxOpenConns int
-	dsn          string
+	addr         string
+	network      string
 }
 
 const (
@@ -49,13 +47,10 @@ func NewAttacker(opts ...func(*Attacker)) *Attacker {
 		opt(a)
 	}
 	var err error
-	a.cnn, err = sql.Open("mysql", a.dsn)
+	a.cnn, err = NewMemached(a.network, a.addr, a.maxOpenConns)
 	if err != nil {
 		log.Fatal(err)
 	}
-	a.cnn.SetMaxIdleConns(a.maxIdleConns)
-	a.cnn.SetMaxOpenConns(a.maxOpenConns)
-	a.cnn.Ping()
 	return a
 }
 
@@ -66,13 +61,13 @@ func Workers(n uint64) func(*Attacker) {
 	return func(a *Attacker) { a.workers = n }
 }
 
-func Dsn(s string) func(*Attacker) {
-	return func(a *Attacker) { a.dsn = s }
+func Addr(s string) func(*Attacker) {
+	return func(a *Attacker) { a.addr = s }
+}
+func Network(s string) func(*Attacker) {
+	return func(a *Attacker) { a.network = s }
 }
 
-func SetMaxIdleConns(n int) func(*Attacker) {
-	return func(a *Attacker) { a.maxIdleConns = n }
-}
 func SetMaxOpenConns(n int) func(*Attacker) {
 	return func(a *Attacker) { a.maxOpenConns = n }
 }
@@ -145,40 +140,10 @@ func (a *Attacker) hit(tr Targeter, tm time.Time) *Result {
 		return &res
 	}
 
-	r, err := a.cnn.Query(req)
-	if err != nil {
-		// ignore redirect errors when the user set --redirects=NoFollow
-		if a.redirects == NoFollow && strings.Contains(err.Error(), "stopped after") {
-			err = nil
-		}
-		return &res
-	}
-	defer r.Close()
-	num := 0
-	for r.Next() {
-		num++
-		/*
-			var id interface{}
-				if err := r.Scan(&id); err != nil {
-					res.Code = 501
-					res.Error = err.Error()
-					res.Error = fmt.Sprintf("row scan err:%s: query:%s", err.Error(), req)
-					return &res
-				}
-		*/
-	}
-	//fmt.Fprintf(os.Stderr, "%d,", num)
-	res.BytesIn = 0
-	res.BytesOut = 0
-
-	err = r.Err()
+	_, err = a.cnn.Query(req)
 
 	if err == nil {
-		if num == 0 {
-			res.Code = 201
-		} else {
-			res.Code = 200
-		}
+		res.Code = 200
 	} else {
 		res.Code = 500
 		res.Error = fmt.Sprintf("%s: query:%s", err.Error(), req)
@@ -201,27 +166,81 @@ type memcacheRes struct {
 type memcacheOp struct {
 	op     string
 	key    string
+	value  []byte
 	result chan memcacheRes
 }
 
 type memcached struct {
 	query   chan memcacheOp
-	conn    []*gomemcache.Memcache
 	maxConn int
+	workers *memcacheWorker
+}
+
+type memcacheWorker struct {
+	query chan memcacheOp
+	conn  *gomemcache.Memcache
+}
+
+func NewMemcacheWorker(network, addr string, query chan memcacheOp) (*memcacheWorker, error) {
+	conn, err := gomemcache.Dial(network, addr)
+	if err != nil {
+		return nil, err
+	}
+	return &memcacheWorker{
+		query: query,
+		conn:  conn,
+	}, nil
+}
+
+func Worker(m *memcacheWorker) {
+	for q := range m.query {
+		switch q.op {
+		case "get":
+			v, _, err := m.conn.Get(q.key)
+			q.result <- memcacheRes{v, err}
+		case "set":
+			err := m.conn.Set(q.key, q.value, 0, 0)
+			q.result <- memcacheRes{err: err}
+		}
+	}
+}
+
+func (m *memcached) Query(line string) ([]byte, error) {
+	str := strings.Split(line, " ")
+	var key string
+	var value []byte
+	op := "get"
+	if len(str) > 0 {
+		op = str[0]
+	}
+	if len(str) > 1 {
+		key = str[1]
+	}
+	if len(str) > 2 {
+		value = []byte(str[2])
+	}
+	q := memcacheOp{
+		op:     op,
+		key:    key,
+		value:  value,
+		result: make(chan memcacheRes, 1),
+	}
+	m.query <- q
+	res := <-q.result
+	return res.value, res.err
 }
 
 func NewMemached(network, addr string, maxConn int) (*memcached, error) {
 	m := &memcached{
-		query:   make(chan memcacheOp),
-		conn:    make([]*gomemcache.Memcache, maxConn),
+		query:   make(chan memcacheOp, maxConn),
 		maxConn: maxConn,
 	}
 	for i := 0; i < maxConn; i++ {
-		conn, err := gomemcache.Dial(network, addr)
+		worker, err := NewMemcacheWorker(network, addr, m.query)
 		if err != nil {
 			return nil, err
 		}
-		m.conn[i] = conn
+		go Worker(worker)
 	}
 	return m, nil
 }

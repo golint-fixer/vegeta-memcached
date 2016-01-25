@@ -23,8 +23,8 @@ func attackCmd() command {
 	fs.Uint64Var(&opts.rate, "rate", 50, "Requests per second")
 	fs.Uint64Var(&opts.workers, "workers", vegeta.DefaultWorkers, "Initial number of workers")
 	fs.IntVar(&opts.maxOpenConns, "maxOpenConns", vegeta.DefaultConnections, "Max open connections per target host")
-	fs.IntVar(&opts.maxIdleConns, "maxIdleConns", vegeta.DefaultConnections, "Max open idle connections per target host")
-	fs.StringVar(&opts.dsn, "dsn", "password@protocol(address)/dbname?param=value", "Data Source Name has a common format")
+	fs.StringVar(&opts.network, "network", "tcp", "tcp/unix")
+	fs.StringVar(&opts.addr, "address", "localhost", "ip/hostname")
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
@@ -47,8 +47,8 @@ type attackOpts struct {
 	rate         uint64
 	workers      uint64
 	maxOpenConns int
-	maxIdleConns int
-	dsn          string
+	network      string
+	addr         string
 }
 
 // attack validates the attack arguments, sets up the
@@ -84,8 +84,8 @@ func attack(opts *attackOpts) (err error) {
 
 	atk := vegeta.NewAttacker(
 		vegeta.Workers(opts.workers),
-		vegeta.Dsn(opts.dsn),
-		vegeta.SetMaxIdleConns(opts.maxIdleConns),
+		vegeta.Network(opts.network),
+		vegeta.Addr(opts.addr),
 		vegeta.SetMaxOpenConns(opts.maxOpenConns),
 	)
 
