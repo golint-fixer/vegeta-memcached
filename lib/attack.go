@@ -9,6 +9,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/kklis/gomemcache"
 )
 
 // Attacker is an attack executor which wraps an http.Client
@@ -144,18 +145,6 @@ func (a *Attacker) hit(tr Targeter, tm time.Time) *Result {
 		return &res
 	}
 
-	/*
-		a.cnn, err = sql.Open("mysql", a.dsn)
-		if err != nil {
-			res.Code = 500
-			res.Error = err.Error()
-			return &res
-		}
-		defer a.cnn.Close()
-		a.cnn.SetMaxIdleConns(a.maxIdleConns)
-		a.cnn.SetMaxOpenConns(a.maxOpenConns)
-	*/
-	//log.Printf("query:%s", req)
 	r, err := a.cnn.Query(req)
 	if err != nil {
 		// ignore redirect errors when the user set --redirects=NoFollow
@@ -202,4 +191,37 @@ func max(a, b time.Time) time.Time {
 		return a
 	}
 	return b
+}
+
+type memcacheRes struct {
+	value []byte
+	err   error
+}
+
+type memcacheOp struct {
+	op     string
+	key    string
+	result chan memcacheRes
+}
+
+type memcached struct {
+	query   chan memcacheOp
+	conn    []*gomemcache.Memcache
+	maxConn int
+}
+
+func NewMemached(network, addr string, maxConn int) (*memcached, error) {
+	m := &memcached{
+		query:   make(chan memcacheOp),
+		conn:    make([]*gomemcache.Memcache, maxConn),
+		maxConn: maxConn,
+	}
+	for i := 0; i < maxConn; i++ {
+		conn, err := gomemcache.Dial(network, addr)
+		if err != nil {
+			return nil, err
+		}
+		m.conn[i] = conn
+	}
+	return m, nil
 }
