@@ -20,35 +20,17 @@ $ go install github.com/masahide/vegeta-memcached
 
 ## Usage manual
 ```shell
+
+$ ./vegeta-memcached
 Usage: vegeta [global flags] <command> [command flags]
 
 global flags:
   -cpus int
-        Number of CPUs to use (default 24)
+        Number of CPUs to use (default 32)
   -profile string
         Enable profiling of [cpu, heap]
   -version
         Print version and exit
-
-attack command:
-  -body string
-        Requests body file
-  -dsn string
-        Data Source Name has a common format (default "password@protocol(address)/dbname?param=value")
-  -duration duration
-        Duration of the test (default 10s)
-  -maxIdleConns int
-        Max open idle connections per target host (default 10000)
-  -maxOpenConns int
-        Max open connections per target host (default 10000)
-  -output string
-        Output file (default "stdout")
-  -rate uint
-        Requests per second (default 50)
-  -timeout duration
-        Requests timeout (default 30s)
-  -workers uint
-        Initial number of workers (default 10)
 
 report command:
   -inputs string
@@ -66,8 +48,28 @@ dump command:
   -output string
         Output file (default "stdout")
 
+attack command:
+  -address string
+        ip/hostname (default "localhost:11211")
+  -body string
+        Requests body file
+  -duration duration
+        Duration of the test (default 10s)
+  -maxOpenConns int
+        Max open connections per target host (default 10000)
+  -network string
+        tcp/unix (default "tcp")
+  -output string
+        Output file (default "stdout")
+  -rate uint
+        Requests per second (default 50)
+  -timeout duration
+        Requests timeout (default 30s)
+  -workers uint
+        Initial number of workers (default 10)
+
 examples:
-  vegeta-memcached attack -dsn "user:pass@tcp(localhost:3306)/hostname" -body sql.txt -duration=60s | tee results.bin | vegeta-memcached report
+  vegeta-memcached attack -address localhost:11211 -body query.txt -duration=60s | tee results.bin | vegeta-memcached report
   vegeta-memcached report -inputs=results.bin -reporter=json > metrics.json
   cat results.bin | vegeta-memcached report -reporter=plot > plot.html
   cat results.bin | vegeta-memcached report -reporter="hist[0,100ms,200ms,300ms]"
@@ -80,16 +82,16 @@ It defaults to the amount of CPUs available in the system.
 ### attack
 ```shell
 Usage of vegeta-memcached attack:
+  -address string
+        ip/hostname (default "localhost:11211")
   -body string
         Requests body file
-  -dsn string
-        Data Source Name has a common format (default "password@protocol(address)/dbname?param=value")
   -duration duration
         Duration of the test (default 10s)
-  -maxIdleConns int
-        Max open idle connections per target host (default 10000)
   -maxOpenConns int
         Max open connections per target host (default 10000)
+  -network string
+        tcp/unix (default "tcp")
   -output string
         Output file (default "stdout")
   -rate uint
@@ -101,7 +103,7 @@ Usage of vegeta-memcached attack:
 ```
 
 #### -body
-sql text.
+query text.
 
 #### -timeout
 Specifies the timeout for each request. The default is 0 which disables

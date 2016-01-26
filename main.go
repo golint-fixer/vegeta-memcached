@@ -80,7 +80,7 @@ var Version = "???"
 
 const examples = `
 examples:
-  vegeta-memcached attack -dsn "user:pass@tcp(localhost:3306)/hostname" -body sql.txt -duration=60s | tee results.bin | vegeta-memcached report
+  vegeta-memcached attack -address localhost:11211 -body query.txt -duration=60s | tee results.bin | vegeta-memcached report
   vegeta-memcached report -inputs=results.bin -reporter=json > metrics.json
   cat results.bin | vegeta-memcached report -reporter=plot > plot.html
   cat results.bin | vegeta-memcached report -reporter="hist[0,100ms,200ms,300ms]"

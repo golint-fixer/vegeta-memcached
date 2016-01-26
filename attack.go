@@ -24,7 +24,7 @@ func attackCmd() command {
 	fs.Uint64Var(&opts.workers, "workers", vegeta.DefaultWorkers, "Initial number of workers")
 	fs.IntVar(&opts.maxOpenConns, "maxOpenConns", vegeta.DefaultConnections, "Max open connections per target host")
 	fs.StringVar(&opts.network, "network", "tcp", "tcp/unix")
-	fs.StringVar(&opts.addr, "address", "localhost", "ip/hostname")
+	fs.StringVar(&opts.addr, "address", "localhost:11211", "host:port")
 
 	return command{fs, func(args []string) error {
 		fs.Parse(args)
